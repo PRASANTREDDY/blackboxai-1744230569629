@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results - Number Plate Recognition</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Recognition Results</h1>
+        
+        <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 space-y-6">
+            <div>
+                <h2 class="text-xl font-semibold mb-2">Original Image:</h2>
+                <img src="{{ url_for('static', filename='uploads/' + filename) }}" 
+                     alt="Uploaded plate" class="max-w-full h-auto rounded-lg border">
+            </div>
+            
+            <div class="p-4 bg-blue-50 rounded-lg">
+                <h2 class="text-xl font-semibold mb-2">Recognized Text:</h2>
+                <p class="text-2xl font-mono bg-white p-3 rounded">{{ plate_text }}</p>
+            </div>
+            
+            <a href="{{ url_for('upload_file') }}" 
+               class="block text-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Process Another Image
+            </a>
+        </div>
+    </div>
+</body>
+</html>
