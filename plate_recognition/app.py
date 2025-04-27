@@ -5,38 +5,27 @@ import numpy as np
 import pytesseract
 import easyocr
 from werkzeug.utils import secure_filename
+from yolov8_utils import YOLOv8Detector
+from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
+detector = YOLOv8Detector(model_path='yolov8s.pt', device='cpu')
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-def detect_plate_region(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Apply bilateral filter to preserve edges
-    filtered = cv2.bilateralFilter(gray, 11, 17, 17)
-    # Edge detection
-    edged = cv2.Canny(filtered, 30, 200)
-    # Find contours
-    contours, _ = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
-    plate_contour = None
-    for contour in contours:
-        peri = cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, 0.018 * peri, True)
-        if len(approx) == 4:
-            plate_contour = approx
-            break
-    if plate_contour is None:
+def detect_plate_region_yolo(img):
+    boxes = detector.detect(img)
+    if not boxes:
         return None
-    # Create mask and extract plate
-    mask = np.zeros(gray.shape, np.uint8)
-    cv2.drawContours(mask, [plate_contour], 0, 255, -1)
-    x, y, w, h = cv2.boundingRect(plate_contour)
-    plate_img = gray[y:y+h, x:x+w]
+    # Assuming the first detected box is the plate
+    box = boxes[0]['box']
+    x1, y1, x2, y2 = box
+    plate_img = img[y1:y2, x1:x2]
     return plate_img
 
 def enhance_image(img):
@@ -61,15 +50,30 @@ def enhance_image(img):
 
 def process_image(image_path):
     img = cv2.imread(image_path)
-    plate_img = detect_plate_region(img)
+    plate_img = detect_plate_region_yolo(img)
     if plate_img is not None:
-        processed_img = enhance_image(plate_img)
+        processed_img = enhance_image(cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY))
     else:
         processed_img = enhance_image(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
 
-    # Use EasyOCR for better OCR results
+    # Use EasyOCR for better OCR results with bounding boxes
     reader = easyocr.Reader(['en'], gpu=False)
     result = reader.readtext(processed_img)
+
+    # Create a color image to draw bounding boxes
+    color_img = cv2.cvtColor(processed_img, cv2.COLOR_GRAY2BGR)
+
+    # Draw bounding boxes around each detected character/block
+    for (bbox, text, prob) in result:
+        # bbox is a list of 4 points
+        pts = np.array(bbox, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv2.polylines(color_img, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
+
+    # Save the image with bounding boxes
+    boxed_filename = "boxed_" + os.path.basename(image_path)
+    boxed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], boxed_filename)
+    cv2.imwrite(boxed_filepath, color_img)
 
     # Extract text from EasyOCR result
     texts = [res[1] for res in result]
@@ -89,7 +93,7 @@ def process_image(image_path):
         else:
             combined_text = ""
 
-    return combined_text
+    return combined_text, boxed_filename
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
@@ -103,8 +107,8 @@ def upload_file():
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-            plate_text = process_image(filepath)
-            return render_template('result.html', filename=filename, plate_text=plate_text)
+            plate_text, boxed_filename = process_image(filepath)
+            return render_template('result.html', filename=boxed_filename, plate_text=plate_text)
     return render_template('index.html')
 
 if __name__ == '__main__':
