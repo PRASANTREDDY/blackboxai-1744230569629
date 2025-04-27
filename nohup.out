@@ -521,3 +521,13 @@ Using CPU. Note: This module is much faster with a GPU.
 127.0.0.1 - - [27/Apr/2025 09:27:28] "POST / HTTP/1.1" 200 -
 127.0.0.1 - - [27/Apr/2025 09:27:28] "[33mGET /static/uploads/boxed_Grayscale_image.jpg HTTP/1.1[0m" 404 -
 127.0.0.1 - - [27/Apr/2025 09:27:34] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Apr/2025 11:41:05] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Apr/2025 11:41:11] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+
+0: 384x640 (no detections), 414.8ms
+Speed: 49.6ms preprocess, 414.8ms inference, 4.8ms postprocess per image at shape (1, 3, 384, 640)
+Using CPU. Note: This module is much faster with a GPU.
+127.0.0.1 - - [27/Apr/2025 11:41:33] "POST / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Apr/2025 11:41:34] "[33mGET /static/uploads/boxed_number_plate_BW.jpeg HTTP/1.1[0m" 404 -
+127.0.0.1 - - [27/Apr/2025 11:41:40] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Apr/2025 12:52:14] "GET / HTTP/1.1" 200 -
